@@ -119,14 +119,22 @@ router.delete('/:id', (req, res) => {
 // Returns the modified document, NOT the original.
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  db.findById(id).then(data => {
-    if (!data) {
-      res.status(404).json().end();
+  const { title, contents } = req.body;
+  if (!title || !contents) {
+    res.status(400).json({ errorMessage: "Please provide title and contents for the post." }).end();
+  }
+  db.findById(id).then(post => {
+    if (!post) {
+      res.status(404).json({ message: "The post with the specified ID does not exist." }).end();
     } else {
-      res.status(200).json(data.comments);
+      db.update(id, { title, contents }).then(updated => {
+        res.status(200).json({ ...post, title, contents, updated });
+      }).catch(err => {
+        res.status(500).json({ error: "The post information could not be modified." }).end();
+      });
     }
   }).catch(err => {
-    res.status(500).json().end();
+    res.status(500).json({ error: "The post information could not be retrieved." }).end();
   });
 });
 

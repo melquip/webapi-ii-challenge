@@ -100,14 +100,18 @@ router.get('/:id/comments', (req, res) => {
 // You may need to make additional calls to the database in order to satisfy this requirement.
 router.delete('/:id', (req, res) => {
   const { id } = req.params;
-  db.findById(id).then(data => {
-    if (!data) {
-      res.status(404).json().end();
+  db.findById(id).then(post => {
+    if (!post) {
+      res.status(404).json({ message: "The post with the specified ID does not exist." }).end();
     } else {
-      res.status(200).json(data.comments);
+      db.remove(id).then(deleted => {
+        res.status(204).json({ ...post, deleted: deleted });
+      }).catch(err => {
+        res.status(500).json({ error: "The post could not be removed" }).end();
+      });
     }
   }).catch(err => {
-    res.status(500).json().end();
+    res.status(500).json({ error: "The post information could not be retrieved." }).end();
   });
 });
 

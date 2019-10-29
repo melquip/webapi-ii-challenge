@@ -16,7 +16,7 @@ router.post('/', (req, res) => {
       res.status(500).json({ errorMessage: "Could not get newly created post." }).end();
     });
   }).catch(err => {
-    res.status(500).json({ error: "There was an error while saving the post to the database" }).end();
+    res.status(500).json({ error: "There was an error while saving the post to the database." }).end();
   });
 });
 
@@ -24,6 +24,7 @@ router.post('/', (req, res) => {
 router.post('/:id/comments', (req, res) => {
   const { id } = req.params;
   const { text } = req.body;
+  // check required text
   if (!text) {
     res.status(400).json({ errorMessage: "Please provide text for the comment." }).end();
   }
@@ -45,7 +46,7 @@ router.post('/:id/comments', (req, res) => {
       });
     }
   }).catch(err => {
-    res.status(500).json({ errorMessage: "Could not find user by id." }).end();
+    res.status(500).json({ error: "The post information could not be retrieved." }).end();
   });
 });
 
@@ -55,7 +56,13 @@ router.get('/', (req, res) => {
     if (!postList) {
       res.status(404).json({ error: "The posts information could not be retrieved." }).end();
     } else {
-      res.status(200).json(postList);
+      let postListCommentPromises = postList.map(post => db.findPostComments(post.id));
+      Promise.all(postListCommentPromises).then(postListComments => {
+        const postListWithComments = postList.map((post, i) => ({ ...post, comments: postListComments[i] }));
+        res.status(200).json(postListWithComments);
+      }).catch(err => {
+        res.status(500).json({ error: "The comments information could not be retrieved." }).end();
+      })
     }
   }).catch(err => {
     res.status(500).json({ error: "The posts information could not be retrieved." }).end();
@@ -105,7 +112,7 @@ router.delete('/:id', (req, res) => {
       res.status(404).json({ message: "The post with the specified ID does not exist." }).end();
     } else {
       db.remove(id).then(deleted => {
-        res.status(204).json({ ...post, deleted: deleted });
+        res.status(200).json(post);
       }).catch(err => {
         res.status(500).json({ error: "The post could not be removed" }).end();
       });
@@ -128,7 +135,7 @@ router.put('/:id', (req, res) => {
       res.status(404).json({ message: "The post with the specified ID does not exist." }).end();
     } else {
       db.update(id, { title, contents }).then(updated => {
-        res.status(200).json({ ...post, title, contents, updated });
+        res.status(200).json({ ...post, title, contents });
       }).catch(err => {
         res.status(500).json({ error: "The post information could not be modified." }).end();
       });

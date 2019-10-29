@@ -9,9 +9,9 @@ router.post('/', (req, res) => {
   if (!title || !contents) {
     res.status(400).json({ errorMessage: "Please provide title and contents for the post." }).end();
   }
-  db.insert({ title, contents }).then(data => {
-    db.findById(data.id).then(data => {
-      res.status(201).json(data);
+  db.insert({ title, contents }).then(post => {
+    db.findById(post.id).then(postData => {
+      res.status(201).json(postData);
     }).catch(err => {
       res.status(500).json({ errorMessage: "Could not get newly created post." }).end();
     });
@@ -27,13 +27,13 @@ router.post('/:id/comments', (req, res) => {
   if (!text) {
     res.status(400).json({ errorMessage: "Please provide text for the comment." }).end();
   }
-  // find user
-  db.findById(id).then(data => {
-    if (!data) {
+  // find post
+  db.findById(id).then(post => {
+    if (!post) {
       res.status(404).json({ message: "The post with the specified ID does not exist." });
     } else {
       // add comment
-      db.insertComment({ text }).then(comment => {
+      db.insertComment({ text, post_id: id }).then(comment => {
         // get comment data
         db.findCommentById(comment.id).then(newComment => {
           res.status(201).json(newComment);
@@ -51,42 +51,48 @@ router.post('/:id/comments', (req, res) => {
 
 // Returns an array of all the post objects contained in the database.
 router.get('/', (req, res) => {
-  db.find().then(data => {
-    if (!data) {
-      res.status(404).json().end();
+  db.find().then(postList => {
+    if (!postList) {
+      res.status(404).json({ error: "The posts information could not be retrieved." }).end();
     } else {
-      res.status(200).json(data);
+      res.status(200).json(postList);
     }
   }).catch(err => {
-    res.status(500).json().end();
+    res.status(500).json({ error: "The posts information could not be retrieved." }).end();
   });
 });
 
 // Returns the post object with the specified id.
 router.get('/:id', (req, res) => {
   const { id } = req.params;
-  db.findById(id).then(data => {
-    if (!data) {
-      res.status(404).json().end();
+  db.findById(id).then(post => {
+    if (!post) {
+      res.status(404).json({ message: "The post with the specified ID does not exist." }).end();
     } else {
-      res.status(200).json(data);
+      res.status(200).json(post);
     }
   }).catch(err => {
-    res.status(500).json().end();
+    res.status(500).json({ error: "The post information could not be retrieved." }).end();
   });
 });
 
 // Returns an array of all the comment objects associated with the post with the specified id.
 router.get('/:id/comments', (req, res) => {
   const { id } = req.params;
-  db.findById(id).then(data => {
-    if (!data) {
-      res.status(404).json().end();
+  // get post
+  db.findById(id).then(post => {
+    if (!post) {
+      res.status(404).json({ message: "The post with the specified ID does not exist." }).end();
     } else {
-      res.status(200).json(data.comments);
+      // get comments
+      db.findPostComments(id).then(comments => {
+        res.status(200).json(comments);
+      }).catch(err => {
+        res.status(500).json({ error: "The comments information could not be retrieved." }).end();
+      });
     }
   }).catch(err => {
-    res.status(500).json().end();
+    res.status(500).json({ error: "The post information could not be retrieved." }).end();
   });
 });
 
